@@ -150,10 +150,23 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- NEW: Register Command 4: Refactor Code ---
+    // --- Register Command 4: Refactor Code ---
     const refactorCommand = vscode.commands.registerCommand('snipsage.refactorCode', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are an expert software architect. Refactor the following code to be more efficient, readable, and idiomatic according to best practices for the ${languageId} language. Return ONLY the refactored code block, without any explanations or markdown fences.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO REFACTOR:\n---\n${selectedText}\n---`,
+            (languageId, selectedText, fullText, moduleName) => `You are an expert software architect. Your task is to refactor the selected code snippet to be more efficient, readable, and idiomatic for the ${languageId} language.
+- Use the full file content for context, but ONLY modify the selected snippet.
+- Return ONLY the refactored version of the selected snippet.
+- Do NOT add any explanations, docstrings, or markdown fences.
+
+FULL FILE CONTENT (for context):
+---
+${fullText}
+---
+
+CODE TO REFACTOR:
+---
+${selectedText}
+---`,
             (editor, selection, refactoredCode) => {
                 const cleanedCode = refactoredCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => { editBuilder.replace(selection, cleanedCode); });
@@ -161,10 +174,24 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- NEW: Register Command 5: Generate Docstring ---
+    // --- Register Command 5: Generate Docstring ---
     const docstringCommand = vscode.commands.registerCommand('snipsage.generateDocstring', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are a technical writer. Generate a professional docstring for the following function/class. Describe what it does, its arguments, and what it returns. Use the standard docstring format for the ${languageId} language (e.g., Google-style for Python, JSDoc for JavaScript). Return the full, original code with the new docstring added.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO DOCUMENT:\n---\n${selectedText}\n---`,
+            (languageId, selectedText, fullText, moduleName) => `You are a technical writer. Your task is to generate a professional docstring for the selected function/class.
+- Use the full file content for context.
+- Use the standard docstring format for the ${languageId} language (e.g., Google-style for Python, JSDoc for JavaScript).
+- Return ONLY the original selected snippet, but with the new docstring added.
+- Do NOT add any other code, explanations, or markdown fences.
+
+FULL FILE CONTENT (for context):
+---
+${fullText}
+---
+
+CODE TO DOCUMENT:
+---
+${selectedText}
+---`,
             (editor, selection, documentedCode) => {
                 const cleanedCode = documentedCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => { editBuilder.replace(selection, cleanedCode); });
@@ -172,7 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- NEW: Register Command 6: Clear Cache ---
+    // --- Register Command 6: Clear Cache ---
     const clearCacheCommand = vscode.commands.registerCommand('snipsage.clearCache', () => {
         lastExplainedRange = null;
         lastExplanation = null;
