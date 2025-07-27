@@ -79,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     dotenv.config({ path: path.join(context.extensionPath, '.env') });
 
-    const commandHandler = async (promptGenerator: (languageId: string, selectedText: string, fullText: string) => string, outputHandler: (editor: vscode.TextEditor, selection: vscode.Selection, responseText: string) => void) => {
+    const commandHandler = async (promptGenerator: (languageId: string, selectedText: string, fullText: string, moduleName: string) => string, outputHandler: (editor: vscode.TextEditor, selection: vscode.Selection, responseText: string) => void) => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor found.');
@@ -94,6 +94,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const fullText = editor.document.getText();
+        // NEW: Get the name of the current file to use as the module name.
+        const moduleName = path.parse(editor.document.fileName).name;
+
         const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) {
@@ -108,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
         }, async () => {
             try {
                 const languageId = editor.document.languageId;
-                const prompt = promptGenerator(languageId, selectedText, fullText);
+                const prompt = promptGenerator(languageId, selectedText, fullText, moduleName);
                 const responseText = await callGemini(prompt, apiKey);
                 outputHandler(editor, selection, responseText);
             } catch (error: any) {
@@ -120,7 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 1: Explain Code ---
     const explainCommand = vscode.commands.registerCommand('snipsage.explainCode', () => {
         commandHandler(
-            (languageId, selectedText, fullText) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet.
+            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet.
 
             FULL FILE CONTENT:
             ---
@@ -138,7 +141,12 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 2: Generate Unit Test ---
     const testCommand = vscode.commands.registerCommand('snipsage.generateTest', () => {
         commandHandler(
-            (languageId, selectedText, fullText) => `You are a testing expert. Use the full file content for context and write a unit test for the selected snippet. Use a common testing framework for the language (e.g., pytest for Python, Jest for JavaScript). Return ONLY the code block for the test.
+            // UPDATED: The prompt now includes the module name for accurate imports.
+            (languageId, selectedText, fullText, moduleName) => `You are a testing expert. The user wants a unit test for a snippet from the module named '${moduleName}'.
+            Use the full file content for context. Write a unit test for the selected snippet.
+            When importing from the local module, use the name '${moduleName}'. For example: 'from ${moduleName} import YourClass'.
+            Use a common testing framework for the language (e.g., pytest for Python, Jest for JavaScript).
+            Return ONLY the code block for the test.
 
             FULL FILE CONTENT:
             ---
@@ -149,11 +157,9 @@ export function activate(context: vscode.ExtensionContext) {
             ---
             ${selectedText}
             ---`,
-            // UPDATED: This output handler now saves the file if a workspace is open, otherwise it opens an unsaved file.
             async (editor, selection, testCode) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
-                // If a folder is open, create and save a new test file.
                 if (workspaceFolder) {
                     const originalPath = path.parse(editor.document.fileName);
                     const testFileName = `${originalPath.name}.test${originalPath.ext}`;
@@ -169,7 +175,6 @@ export function activate(context: vscode.ExtensionContext) {
                         vscode.window.showErrorMessage(`Failed to create test file: ${error.message}`);
                     }
                 } else {
-                    // If no folder is open, open the test code in a new, unsaved document.
                     const doc = await vscode.workspace.openTextDocument({ content: testCode, language: editor.document.languageId });
                     await vscode.window.showTextDocument(doc);
                 }
@@ -180,7 +185,7 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 3: Add Comments ---
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
-            (languageId, selectedText, fullText) => `You are an expert programmer acting as a code commenter.
+            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer acting as a code commenter.
             Your task is to add helpful inline comments to the user's selected code snippet.
             Use the full file content for context, but ONLY modify the selected snippet.
             Return ONLY the original selected snippet, character for character, but with your inline comments added.
