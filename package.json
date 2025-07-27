@@ -3,7 +3,7 @@
   "displayName": "SnipSage",
   "description": "Your AI-powered assistant to explain, test, and comment your code.",
   "version": "0.1.0",
-  "publisher": "Ishan",
+  "publisher": "Ishan Soni",
   "engines": {
     "vscode": "^1.85.0"
   },
