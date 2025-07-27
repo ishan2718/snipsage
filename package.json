@@ -7,15 +7,28 @@
     "vscode": "^1.102.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Education"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:snipsage.explainCode",
+    "onCommand:snipsage.generateTest",
+    "onCommand:snipsage.addComments"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "snipsage.helloWorld",
-        "title": "Hello World"
+        "command": "snipsage.explainCode",
+        "title": "SnipSage: Explain Selection"
+      },
+      {
+        "command": "snipsage.generateTest",
+        "title": "SnipSage: Generate Unit Test"
+      },
+      {
+        "command": "snipsage.addComments",
+        "title": "SnipSage: Add Comments to Selection"
       }
     ]
   },
@@ -24,7 +37,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
+    "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
   "devDependencies": {
