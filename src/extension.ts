@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-// NEW: Import the 'dotenv' package to read the .env file
 import * as dotenv from 'dotenv';
-// NEW: Import the 'path' package to help locate the .env file
 import * as path from 'path';
 
 // --- Define a type for the expected Gemini API response structure ---
@@ -36,7 +34,8 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (rawText) {
-        return rawText;
+        // Clean up the response to remove markdown code block formatting
+        return rawText.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
     } else {
         console.error('Unexpected API response structure:', result);
         throw new Error('Could not extract a valid response from the API.');
@@ -52,6 +51,7 @@ function showExplanationInWebview(explanation: string) {
         {} 
     );
 
+    // Replace markdown newlines with HTML line breaks for proper rendering
     const formattedExplanation = explanation.replace(/\n/g, '<br>');
 
     panel.webview.html = `
@@ -77,8 +77,6 @@ function showExplanationInWebview(explanation: string) {
 // --- Main activation function ---
 export function activate(context: vscode.ExtensionContext) {
 
-    // NEW: Configure dotenv to find the .env file in the project root
-    // context.extensionPath gives the root directory of your extension
     dotenv.config({ path: path.join(context.extensionPath, '.env') });
 
     const commandHandler = async (promptGenerator: (languageId: string, selectedText: string, fullText: string) => string, outputHandler: (editor: vscode.TextEditor, selection: vscode.Selection, responseText: string) => void) => {
@@ -96,8 +94,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const fullText = editor.document.getText();
-
-        // UPDATED: Read the API key from the environment variables loaded by dotenv
         const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) {
@@ -154,8 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
             ${selectedText}
             ---`,
             (editor, selection, testCode) => {
-                const cleanedCode = testCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
-                vscode.workspace.openTextDocument({ content: cleanedCode, language: editor.document.languageId })
+                vscode.workspace.openTextDocument({ content: testCode, language: editor.document.languageId })
                     .then(doc => vscode.window.showTextDocument(doc));
             }
         );
@@ -164,7 +159,12 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 3: Add Comments ---
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
-            (languageId, selectedText, fullText) => `You are an expert programmer. Use the full file content for context. Add concise, helpful inline comments ONLY to the selected snippet. Return the full code of the selected snippet with comments added.
+            // UPDATED: The prompt is now more forceful and specific.
+            (languageId, selectedText, fullText) => `You are an expert programmer acting as a code commenter.
+            Your task is to add helpful inline comments to the user's selected code snippet.
+            Use the full file content for context, but ONLY modify the selected snippet.
+            Return ONLY the original selected snippet, character for character, but with your inline comments added.
+            Do NOT add any text, explanations, docstrings, or code fences before or after the code.
 
             FULL FILE CONTENT:
             ---
@@ -176,7 +176,6 @@ export function activate(context: vscode.ExtensionContext) {
             ${selectedText}
             ---`,
             (editor, selection, commentedCode) => {
-                const cleanedCode = commentedCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => {
                     editBuilder.replace(selection, commentedCode);
                 });
