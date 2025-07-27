@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "snipsage.explainCode",
-        "title": "SnipSage: Explain Selection"
+        "title": "SnipSage: Explain Selection (for Hover)"
       },
       {
         "command": "snipsage.generateTest",

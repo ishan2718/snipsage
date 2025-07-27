@@ -13,8 +13,9 @@ interface GeminiResponse {
     }>;
 }
 
-// NEW: A simple cache to store explanations. Key: code snippet, Value: explanation.
-const explanationCache = new Map<string, string>();
+// A simpler cache to store the last explained range and its explanation.
+let lastExplainedRange: vscode.Range | null = null;
+let lastExplanation: string | null = null;
 
 // --- Reusable function to call the Gemini API ---
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
@@ -37,7 +38,6 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (rawText) {
-        // Clean up the response to remove markdown code block formatting
         return rawText.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
     } else {
         console.error('Unexpected API response structure:', result);
@@ -50,27 +50,24 @@ export function activate(context: vscode.ExtensionContext) {
 
     dotenv.config({ path: path.join(context.extensionPath, '.env') });
 
+    // This command handler is used for all commands.
     const commandHandler = async (promptGenerator: (languageId: string, selectedText: string, fullText: string, moduleName: string) => string, outputHandler: (editor: vscode.TextEditor, selection: vscode.Selection, responseText: string) => void) => {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) {
+        if (!editor) { 
             vscode.window.showErrorMessage('No active editor found.');
-            return;
+            return; 
         }
-
         const selection = editor.selection;
         const selectedText = editor.document.getText(selection);
-        if (!selectedText) {
+        if (!selectedText) { 
             vscode.window.showErrorMessage('No code selected.');
-            return;
+            return; 
         }
-
         const fullText = editor.document.getText();
         const moduleName = path.parse(editor.document.fileName).name;
-
         const apiKey = process.env.GEMINI_API_KEY;
-        
         if (!apiKey) {
-            vscode.window.showErrorMessage('GEMINI_API_KEY not found. Please add it to your .env file in the project root.');
+            vscode.window.showErrorMessage('GEMINI_API_KEY not found in .env file.');
             return;
         }
 
@@ -80,8 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
             cancellable: false
         }, async () => {
             try {
-                const languageId = editor.document.languageId;
-                const prompt = promptGenerator(languageId, selectedText, fullText, moduleName);
+                const prompt = promptGenerator(editor.document.languageId, selectedText, fullText, moduleName);
                 const responseText = await callGemini(prompt, apiKey);
                 outputHandler(editor, selection, responseText);
             } catch (error: any) {
@@ -90,24 +86,14 @@ export function activate(context: vscode.ExtensionContext) {
         });
     };
 
-    // --- Register Command 1: Explain Code (UPDATED to cache the result) ---
+    // --- Register Command 1: Explain Code (for Hover) ---
     const explainCommand = vscode.commands.registerCommand('snipsage.explainCode', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet using markdown for formatting.
-
-            FULL FILE CONTENT:
-            ---
-            ${fullText}
-            ---
-            
-            SELECTED SNIPPET TO EXPLAIN:
-            ---
-            ${selectedText}
-            ---`,
+            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet using markdown for formatting.\n\nFULL FILE CONTENT:\n---\n${fullText}\n---\n\nSELECTED SNIPPET TO EXPLAIN:\n---\n${selectedText}\n---`,
             (editor, selection, explanation) => {
-                // Store the explanation in the cache with the selected text as the key
-                explanationCache.set(editor.document.getText(selection), explanation);
-                // Let the user know the explanation is ready for hover
+                // Store the range and the explanation for the hover provider.
+                lastExplainedRange = selection;
+                lastExplanation = explanation;
                 vscode.window.setStatusBarMessage('SnipSage: Explanation ready. Hover over the code to see it.', 5000);
             }
         );
@@ -116,7 +102,11 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 2: Generate Unit Test ---
     const testCommand = vscode.commands.registerCommand('snipsage.generateTest', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are a testing expert. The user wants a unit test for a snippet from the module named '${moduleName}'. Use the full file content for context. Write a unit test for the selected snippet. When importing from the local module, use the name '${moduleName}'. Return ONLY the code block for the test.
+            (languageId, selectedText, fullText, moduleName) => `You are a testing expert. The user wants a unit test for a snippet from the module named '${moduleName}'.
+            Use the full file content for context. Write a unit test for the selected snippet.
+            When importing from the local module, use the name '${moduleName}'. For example: 'from ${moduleName} import YourClass'.
+            Use a common testing framework for the language (e.g., pytest for Python, Jest for JavaScript).
+            Return ONLY the code block for the test.
 
             FULL FILE CONTENT:
             ---
@@ -129,12 +119,16 @@ export function activate(context: vscode.ExtensionContext) {
             ---`,
             async (editor, selection, testCode) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
                 if (workspaceFolder) {
                     const originalPath = path.parse(editor.document.fileName);
                     const testFileName = `${originalPath.name}.test${originalPath.ext}`;
                     const testFileUri = vscode.Uri.joinPath(workspaceFolder.uri, testFileName);
+
                     try {
-                        await vscode.workspace.fs.writeFile(testFileUri, new TextEncoder().encode(testCode));
+                        const contentBytes = new TextEncoder().encode(testCode);
+                        await vscode.workspace.fs.writeFile(testFileUri, contentBytes);
+                        
                         const doc = await vscode.workspace.openTextDocument(testFileUri);
                         await vscode.window.showTextDocument(doc);
                     } catch (error: any) {
@@ -151,17 +145,21 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 3: Add Comments ---
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are a code commenting AI. Your ONLY job is to add inline comments to the provided code. Follow these rules strictly: 1. PRESERVE CODE: You must return the exact code you were given, character-for-character. Do not delete, add, or change any lines of code. 2. ADD COMMENTS: Add helpful, concise inline comments. 3. NO EXTRA TEXT: Your output must ONLY be the code with comments.
+            (languageId, selectedText, fullText, moduleName) => `You are a code commenting AI. Your ONLY job is to add inline comments to the provided code.
+Follow these rules strictly:
+1.  **PRESERVE CODE:** You must return the exact code you were given, character-for-character. Do not delete, add, or change any lines of code. This includes imports, blank lines, and existing formatting.
+2.  **ADD COMMENTS:** Add helpful, concise inline comments to explain complex or non-obvious parts of the code.
+3.  **NO EXTRA TEXT:** Your output must ONLY be the code with comments. Do not include any explanations, greetings, or markdown code fences like \`\`\`.
 
-            FULL FILE CONTENT (for context):
-            ---
-            ${fullText}
-            ---
+Here is the full file for context, but do not modify it:
+---
+${fullText}
+---
 
-            CODE TO ADD COMMENTS TO:
-            ---
-            ${selectedText}
-            ---`,
+Here is the specific code you must add comments to. Remember to return this exact code, plus your comments:
+---
+${selectedText}
+---`,
             (editor, selection, commentedCode) => {
                 editor.edit(editBuilder => {
                     editBuilder.replace(selection, commentedCode);
@@ -170,27 +168,15 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- NEW: Register the Hover Provider ---
-    const hoverProvider = vscode.languages.registerHoverProvider('*', {
+    // --- Register the Hover Provider ---
+    const hoverProvider = vscode.languages.registerHoverProvider({ scheme: 'file', language: '*' }, {
         provideHover(document, position, token) {
-            // Iterate over all cached explanations
-            for (const [codeSnippet, explanation] of explanationCache.entries()) {
-                const fullText = document.getText();
-                const snippetIndex = fullText.indexOf(codeSnippet);
-
-                if (snippetIndex !== -1) {
-                    const startPos = document.positionAt(snippetIndex);
-                    const endPos = document.positionAt(snippetIndex + codeSnippet.length);
-                    const range = new vscode.Range(startPos, endPos);
-
-                    // Check if the current hover position is within the range of a cached snippet
-                    if (range.contains(position)) {
-                        const markdownString = new vscode.MarkdownString(explanation);
-                        return new vscode.Hover(markdownString, range);
-                    }
-                }
+            // Check if there is a cached explanation and if the hover position is within its range.
+            if (lastExplainedRange && lastExplanation && lastExplainedRange.contains(position)) {
+                const markdownString = new vscode.MarkdownString(lastExplanation);
+                return new vscode.Hover(markdownString, lastExplainedRange);
             }
-            return null; // No explanation found for this hover position
+            return null;
         }
     });
 
