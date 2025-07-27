@@ -40,6 +40,7 @@ Option 2: (Not sure whether this will work or not)
 - Choose the .vsix file you just downloaded.
 
 How to Use
+- Open command palette using Ctrl + Shift + P on Windows or Cmd + Shift + P on Mac and search SnipSage. You will see a list of SnipSage commands.
 - The first time you run a SnipSage command, you will be prompted to enter your Google Gemini API key. This will be securely saved for future use.
 To Explain Code:
 - Select a block of code.
