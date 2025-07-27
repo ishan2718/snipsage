@@ -25,7 +25,17 @@
         "command": "snipsage.addComments",
         "title": "SnipSage: Add Comments to Selection"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "SnipSage",
+      "properties": {
+        "snipsage.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Google Gemini API Key."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -39,7 +49,6 @@
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "dotenv": "^16.4.5"
+    "typescript": "^5.3.3"
   }
 }

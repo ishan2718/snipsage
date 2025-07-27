@@ -45,6 +45,26 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 }
 
+// --- NEW: Function to get the API key from settings, or prompt the user if it doesn't exist ---
+async function getApiKey(): Promise<string | undefined> {
+    const config = vscode.workspace.getConfiguration('snipsage');
+    let apiKey = config.get<string>('apiKey');
+
+    if (!apiKey) {
+        apiKey = await vscode.window.showInputBox({
+            prompt: 'Please enter your Google Gemini API Key',
+            placeHolder: 'Enter your key here',
+            ignoreFocusOut: true, // Keep the box open even if the user clicks away
+        });
+
+        if (apiKey) {
+            // Save the key to the global settings for future use
+            await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+        }
+    }
+    return apiKey;
+}
+
 // --- Main activation function ---
 export function activate(context: vscode.ExtensionContext) {
 
@@ -63,13 +83,16 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage('No code selected.');
             return; 
         }
-        const fullText = editor.document.getText();
-        const moduleName = path.parse(editor.document.fileName).name;
-        const apiKey = process.env.GEMINI_API_KEY;
+
+        // Get the API key, prompting the user if necessary.
+        const apiKey = await getApiKey();
         if (!apiKey) {
-            vscode.window.showErrorMessage('GEMINI_API_KEY not found in .env file.');
+            vscode.window.showErrorMessage('SnipSage requires a Gemini API key to function.');
             return;
         }
+
+        const fullText = editor.document.getText();
+        const moduleName = path.parse(editor.document.fileName).name;
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
