@@ -33,7 +33,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 
     const result = await response.json() as GeminiResponse;
-    
+
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (rawText) {
         return rawText;
@@ -53,6 +53,7 @@ async function getApiKey(): Promise<string | undefined> {
             prompt: 'Please enter your Google Gemini API Key',
             placeHolder: 'Enter your key here',
             ignoreFocusOut: true,
+            password: true
         });
 
         if (apiKey) {
@@ -205,7 +206,7 @@ ${selectedText}
         lastExplanation = null;
         vscode.window.setStatusBarMessage('SnipSage: Explanation cache cleared.', 5000);
     });
-    
+
     // --- Register Command 7: Show Explanation in Panel ---
     const showInPanelCommand = vscode.commands.registerCommand('snipsage.showExplanationInPanel', () => {
         if (lastExplanation) { showExplanationInWebview(lastExplanation); }
@@ -228,4 +229,4 @@ ${selectedText}
     context.subscriptions.push(explainCommand, testCommand, commentCommand, refactorCommand, docstringCommand, clearCacheCommand, showInPanelCommand, hoverProvider);
 }
 
-export function deactivate() {}
+export function deactivate() { }
