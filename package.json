@@ -24,6 +24,11 @@
       {
         "command": "snipsage.addComments",
         "title": "SnipSage: Add Comments to Selection"
+      },
+      {
+        "command": "snipsage.showExplanationInPanel",
+        "title": "SnipSage: Show Explanation in Panel",
+        "category": "SnipSageInternal"
       }
     ],
     "configuration": {
