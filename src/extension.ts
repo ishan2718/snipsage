@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 
 // --- Define a type for the expected Gemini API response structure ---
-// This tells TypeScript what the shape of the JSON object will be.
 interface GeminiResponse {
     candidates: Array<{
         content: {
@@ -29,18 +28,62 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
         throw new Error(`API request failed with status ${response.status}. Check the console for details.`);
     }
 
-    // Cast the JSON response to our defined type to resolve the 'unknown' error.
     const result = await response.json() as GeminiResponse;
     
-    // Clean up the response to remove markdown code block formatting
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (rawText) {
-        return rawText.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
+        // Return the raw markdown text
+        return rawText;
     } else {
         console.error('Unexpected API response structure:', result);
         throw new Error('Could not extract a valid response from the API.');
     }
 }
+
+// --- NEW: Function to display explanation in a Webview Panel ---
+function showExplanationInWebview(explanation: string) {
+    // Create a new webview panel
+    const panel = vscode.window.createWebviewPanel(
+        'snipSageExplanation', // Identifies the type of the webview. Used internally
+        'SnipSage Explanation', // Title of the panel displayed to the user
+        vscode.ViewColumn.Beside, // Editor column to show the new webview panel in.
+        {} // Webview options.
+    );
+
+    // Replace markdown newlines with HTML line breaks for proper rendering
+    const formattedExplanation = explanation.replace(/\n/g, '<br>');
+
+    // Set the HTML content for the webview
+    panel.webview.html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SnipSage Explanation</title>
+            <style>
+                body {
+                    background-color: #1e1e1e;
+                    color: #d4d4d4;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                    padding: 20px;
+                    line-height: 1.6;
+                }
+                code {
+                    background-color: #333;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-family: 'Courier New', Courier, monospace;
+                }
+            </style>
+        </head>
+        <body>
+            ${formattedExplanation}
+        </body>
+        </html>
+    `;
+}
+
 
 // --- Main activation function ---
 export function activate(context: vscode.ExtensionContext) {
@@ -59,7 +102,6 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // IMPORTANT: Replace with your actual Gemini API Key
         const apiKey = "AIzaSyBLvt6Cnyj5PePdjFU5Z69PziwkMQZey-o"; // <--- PASTE YOUR GEMINI API KEY HERE
         if (!apiKey) {
             vscode.window.showErrorMessage('SnipSage API key is not set. Please add it in the extension.ts file.');
@@ -82,11 +124,12 @@ export function activate(context: vscode.ExtensionContext) {
         });
     };
 
-    // --- Register Command 1: Explain Code ---
+    // --- Register Command 1: Explain Code (Updated to use Webview) ---
     const explainCommand = vscode.commands.registerCommand('snipsage.explainCode', () => {
         commandHandler(
-            (languageId, selectedText) => `You are an expert programmer. Explain the following snippet of ${languageId} code in a clear, concise way. Focus on the core logic and purpose:\n\n---\n${selectedText}\n---`,
-            (editor, selection, explanation) => vscode.window.showInformationMessage(explanation, { modal: false })
+            (languageId, selectedText) => `You are an expert programmer. Explain the following snippet of ${languageId} code in a clear, concise way. Focus on the core logic and purpose. Use markdown for formatting like code blocks and bold text.\n\n---\n${selectedText}\n---`,
+            // UPDATED: Call the new webview function instead of showInformationMessage
+            (editor, selection, explanation) => showExplanationInWebview(explanation)
         );
     });
 
@@ -95,7 +138,8 @@ export function activate(context: vscode.ExtensionContext) {
         commandHandler(
             (languageId, selectedText) => `You are a testing expert. Given the following ${languageId} code, write a simple unit test for it. Use a common testing framework for the language (e.g., pytest for Python, Jest for JavaScript, JUnit for Java). Return ONLY the code block for the test, with no extra explanation.\n\n---\n${selectedText}\n---`,
             (editor, selection, testCode) => {
-                vscode.workspace.openTextDocument({ content: testCode, language: editor.document.languageId })
+                const cleanedCode = testCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
+                vscode.workspace.openTextDocument({ content: cleanedCode, language: editor.document.languageId })
                     .then(doc => vscode.window.showTextDocument(doc));
             }
         );
@@ -106,8 +150,9 @@ export function activate(context: vscode.ExtensionContext) {
         commandHandler(
             (languageId, selectedText) => `You are an expert programmer. Add concise, helpful inline comments to the following ${languageId} code where necessary to clarify the logic. Do not add comments for obvious code. Return the full, original code block with the new comments added.\n\n---\n${selectedText}\n---`,
             (editor, selection, commentedCode) => {
+                const cleanedCode = commentedCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => {
-                    editBuilder.replace(selection, commentedCode);
+                    editBuilder.replace(selection, cleanedCode);
                 });
             }
         );
@@ -115,5 +160,3 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(explainCommand, testCommand, commentCommand);
 }
-
-export function deactivate() {}
