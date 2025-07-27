@@ -2,8 +2,8 @@
   "name": "snipsage",
   "displayName": "SnipSage",
   "description": "Your AI-powered assistant to explain, test, and comment your code.",
-  "version": "0.0.1",
-  "publisher": "your-publisher-name",
+  "version": "0.1.0",
+  "publisher": "Ishan",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -20,7 +20,10 @@
     "onCommand:snipsage.explainCode",
     "onCommand:snipsage.generateTest",
     "onCommand:snipsage.addComments",
-    "onCommand:snipsage.showExplanationInPanel"
+    "onCommand:snipsage.showExplanationInPanel",
+    "onCommand:snipsage.refactorCode",
+    "onCommand:snipsage.generateDocstring",
+    "onCommand:snipsage.clearCache"
   ],
   "contributes": {
     "commands": [
@@ -35,6 +38,18 @@
       {
         "command": "snipsage.addComments",
         "title": "SnipSage: Add Comments to Selection"
+      },
+      {
+        "command": "snipsage.refactorCode",
+        "title": "SnipSage: Refactor Selection"
+      },
+      {
+        "command": "snipsage.generateDocstring",
+        "title": "SnipSage: Generate Docstring"
+      },
+      {
+        "command": "snipsage.clearCache",
+        "title": "SnipSage: Clear Explanation Cache"
       },
       {
         "command": "snipsage.showExplanationInPanel",
