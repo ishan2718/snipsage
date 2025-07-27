@@ -149,9 +149,30 @@ export function activate(context: vscode.ExtensionContext) {
             ---
             ${selectedText}
             ---`,
-            (editor, selection, testCode) => {
-                vscode.workspace.openTextDocument({ content: testCode, language: editor.document.languageId })
-                    .then(doc => vscode.window.showTextDocument(doc));
+            // UPDATED: This output handler now saves the file if a workspace is open, otherwise it opens an unsaved file.
+            async (editor, selection, testCode) => {
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+                // If a folder is open, create and save a new test file.
+                if (workspaceFolder) {
+                    const originalPath = path.parse(editor.document.fileName);
+                    const testFileName = `${originalPath.name}.test${originalPath.ext}`;
+                    const testFileUri = vscode.Uri.joinPath(workspaceFolder.uri, testFileName);
+
+                    try {
+                        const contentBytes = new TextEncoder().encode(testCode);
+                        await vscode.workspace.fs.writeFile(testFileUri, contentBytes);
+                        
+                        const doc = await vscode.workspace.openTextDocument(testFileUri);
+                        await vscode.window.showTextDocument(doc);
+                    } catch (error: any) {
+                        vscode.window.showErrorMessage(`Failed to create test file: ${error.message}`);
+                    }
+                } else {
+                    // If no folder is open, open the test code in a new, unsaved document.
+                    const doc = await vscode.workspace.openTextDocument({ content: testCode, language: editor.document.languageId });
+                    await vscode.window.showTextDocument(doc);
+                }
             }
         );
     });
@@ -159,7 +180,6 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 3: Add Comments ---
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
-            // UPDATED: The prompt is now more forceful and specific.
             (languageId, selectedText, fullText) => `You are an expert programmer acting as a code commenter.
             Your task is to add helpful inline comments to the user's selected code snippet.
             Use the full file content for context, but ONLY modify the selected snippet.
