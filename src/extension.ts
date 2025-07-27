@@ -1,5 +1,17 @@
 import * as vscode from 'vscode';
 
+// --- Define a type for the expected Gemini API response structure ---
+// This tells TypeScript what the shape of the JSON object will be.
+interface GeminiResponse {
+    candidates: Array<{
+        content: {
+            parts: Array<{
+                text: string;
+            }>;
+        };
+    }>;
+}
+
 // --- Reusable function to call the Gemini API ---
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
 	const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -17,7 +29,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
 		throw new Error(`API request failed with status ${response.status}. Check the console for details.`);
 	}
 
-	const result = await response.json();
+	const result = await response.json() as GeminiResponse;
 
 	// Clean up the response to remove markdown code block formatting
 	const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
