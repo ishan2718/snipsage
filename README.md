@@ -25,12 +25,12 @@ Prerequisites
 You will need a Google Gemini API key. You can get a free key from Google AI Studio.
 
 Installation Steps
+
 Option 1:
 - Clone the repo in your local coding environment.
 - Open terminal and run "npm install" to install packages from package.json
 - Press F5 to run the extension
 - A new VS Code window will open. Open any code file to test the extension. See How to Use section for more info.
-
 
 Option 2: (Not sure whether this will work or not)
 - Navigate to the Releases page of this repository. (Replace with your actual link)
