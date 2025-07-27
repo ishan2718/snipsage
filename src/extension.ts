@@ -13,6 +13,9 @@ interface GeminiResponse {
     }>;
 }
 
+// NEW: A simple cache to store explanations. Key: code snippet, Value: explanation.
+const explanationCache = new Map<string, string>();
+
 // --- Reusable function to call the Gemini API ---
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -42,38 +45,6 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 }
 
-// --- Function to display explanation in a Webview Panel ---
-function showExplanationInWebview(explanation: string) {
-    const panel = vscode.window.createWebviewPanel(
-        'snipSageExplanation', 
-        'SnipSage Explanation', 
-        vscode.ViewColumn.Beside, 
-        {} 
-    );
-
-    // Replace markdown newlines with HTML line breaks for proper rendering
-    const formattedExplanation = explanation.replace(/\n/g, '<br>');
-
-    panel.webview.html = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>SnipSage Explanation</title>
-            <style>
-                body { background-color: #1e1e1e; color: #d4d4d4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; padding: 20px; line-height: 1.6; }
-                code { background-color: #333; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
-            </style>
-        </head>
-        <body>
-            ${formattedExplanation}
-        </body>
-        </html>
-    `;
-}
-
-
 // --- Main activation function ---
 export function activate(context: vscode.ExtensionContext) {
 
@@ -94,7 +65,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const fullText = editor.document.getText();
-        // NEW: Get the name of the current file to use as the module name.
         const moduleName = path.parse(editor.document.fileName).name;
 
         const apiKey = process.env.GEMINI_API_KEY;
@@ -120,10 +90,10 @@ export function activate(context: vscode.ExtensionContext) {
         });
     };
 
-    // --- Register Command 1: Explain Code ---
+    // --- Register Command 1: Explain Code (UPDATED to cache the result) ---
     const explainCommand = vscode.commands.registerCommand('snipsage.explainCode', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet.
+            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. A user has selected a snippet from a file. Use the full file content for context. Explain ONLY the selected snippet using markdown for formatting.
 
             FULL FILE CONTENT:
             ---
@@ -134,19 +104,19 @@ export function activate(context: vscode.ExtensionContext) {
             ---
             ${selectedText}
             ---`,
-            (editor, selection, explanation) => showExplanationInWebview(explanation)
+            (editor, selection, explanation) => {
+                // Store the explanation in the cache with the selected text as the key
+                explanationCache.set(editor.document.getText(selection), explanation);
+                // Let the user know the explanation is ready for hover
+                vscode.window.setStatusBarMessage('SnipSage: Explanation ready. Hover over the code to see it.', 5000);
+            }
         );
     });
 
     // --- Register Command 2: Generate Unit Test ---
     const testCommand = vscode.commands.registerCommand('snipsage.generateTest', () => {
         commandHandler(
-            // UPDATED: The prompt now includes the module name for accurate imports.
-            (languageId, selectedText, fullText, moduleName) => `You are a testing expert. The user wants a unit test for a snippet from the module named '${moduleName}'.
-            Use the full file content for context. Write a unit test for the selected snippet.
-            When importing from the local module, use the name '${moduleName}'. For example: 'from ${moduleName} import YourClass'.
-            Use a common testing framework for the language (e.g., pytest for Python, Jest for JavaScript).
-            Return ONLY the code block for the test.
+            (languageId, selectedText, fullText, moduleName) => `You are a testing expert. The user wants a unit test for a snippet from the module named '${moduleName}'. Use the full file content for context. Write a unit test for the selected snippet. When importing from the local module, use the name '${moduleName}'. Return ONLY the code block for the test.
 
             FULL FILE CONTENT:
             ---
@@ -159,16 +129,12 @@ export function activate(context: vscode.ExtensionContext) {
             ---`,
             async (editor, selection, testCode) => {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
                 if (workspaceFolder) {
                     const originalPath = path.parse(editor.document.fileName);
                     const testFileName = `${originalPath.name}.test${originalPath.ext}`;
                     const testFileUri = vscode.Uri.joinPath(workspaceFolder.uri, testFileName);
-
                     try {
-                        const contentBytes = new TextEncoder().encode(testCode);
-                        await vscode.workspace.fs.writeFile(testFileUri, contentBytes);
-                        
+                        await vscode.workspace.fs.writeFile(testFileUri, new TextEncoder().encode(testCode));
                         const doc = await vscode.workspace.openTextDocument(testFileUri);
                         await vscode.window.showTextDocument(doc);
                     } catch (error: any) {
@@ -185,18 +151,14 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 3: Add Comments ---
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are an expert programmer acting as a code commenter.
-            Your task is to add helpful inline comments to the user's selected code snippet.
-            Use the full file content for context, but ONLY modify the selected snippet.
-            Return ONLY the original selected snippet, character for character, but with your inline comments added.
-            Do NOT add any text, explanations, docstrings, or code fences before or after the code.
+            (languageId, selectedText, fullText, moduleName) => `You are a code commenting AI. Your ONLY job is to add inline comments to the provided code. Follow these rules strictly: 1. PRESERVE CODE: You must return the exact code you were given, character-for-character. Do not delete, add, or change any lines of code. 2. ADD COMMENTS: Add helpful, concise inline comments. 3. NO EXTRA TEXT: Your output must ONLY be the code with comments.
 
-            FULL FILE CONTENT:
+            FULL FILE CONTENT (for context):
             ---
             ${fullText}
             ---
 
-            SELECTED SNIPPET TO COMMENT:
+            CODE TO ADD COMMENTS TO:
             ---
             ${selectedText}
             ---`,
@@ -208,7 +170,31 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    context.subscriptions.push(explainCommand, testCommand, commentCommand);
+    // --- NEW: Register the Hover Provider ---
+    const hoverProvider = vscode.languages.registerHoverProvider('*', {
+        provideHover(document, position, token) {
+            // Iterate over all cached explanations
+            for (const [codeSnippet, explanation] of explanationCache.entries()) {
+                const fullText = document.getText();
+                const snippetIndex = fullText.indexOf(codeSnippet);
+
+                if (snippetIndex !== -1) {
+                    const startPos = document.positionAt(snippetIndex);
+                    const endPos = document.positionAt(snippetIndex + codeSnippet.length);
+                    const range = new vscode.Range(startPos, endPos);
+
+                    // Check if the current hover position is within the range of a cached snippet
+                    if (range.contains(position)) {
+                        const markdownString = new vscode.MarkdownString(explanation);
+                        return new vscode.Hover(markdownString, range);
+                    }
+                }
+            }
+            return null; // No explanation found for this hover position
+        }
+    });
+
+    context.subscriptions.push(explainCommand, testCommand, commentCommand, hoverProvider);
 }
 
 export function deactivate() {}
