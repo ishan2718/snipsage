@@ -2,8 +2,9 @@
   "name": "snipsage",
   "displayName": "SnipSage",
   "description": "Your AI-powered assistant to explain, test, and comment your code.",
-  "version": "0.1.0",
-  "publisher": "Ishan Soni",
+  "version": "0.1.1",
+  "publisher": "ishansoni",
+  "icon":"assets/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },

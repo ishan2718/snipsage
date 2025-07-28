@@ -1,52 +1,65 @@
 SnipSage: Your AI Code Assistant
-SnipSage is a VS Code extension that brings the power of the Google Gemini API directly into your editor, helping you understand, validate, and improve your code faster than ever before.
+<p align="center">
+<img src="./assets/logo.png" alt="SnipSage Logo" width="128">
+</p>
 
-![SnipSage Banner](./snipsage-logo.jpg)
+<p align="center">
+<strong>Understand, validate, and improve your code faster than ever before with the power of the Google Gemini API directly in your editor.</strong>
+</p>
 
-About The Project
-SnipSage is a multi-tool for developers, offering a suite of commands to accelerate your workflow. It can explain complex code in plain English, generate complete unit tests, add helpful inline comments, refactor code for better performance and readability, and even generate professional docstrings. It’s a seamless assistant that feels like a native part of the development workflow, inspired by the universal challenge of deciphering complex and unfamiliar code.
+What is SnipSage?
+SnipSage is a VS Code extension that acts as your personal AI-powered assistant. It's designed to accelerate your workflow by helping you decipher complex code, ensure its quality, and improve its structure, all without leaving your editor. Whether you're navigating a new codebase or polishing your own work, SnipSage provides the insights you need, right when you need them.
 
 Features
-- Explain Code: Select any code snippet and run the Explain Selection command. An explanation is generated and appears instantly when you hover over the code, with an option to open it in a side panel for detailed review.
-- Generate Unit Tests: Automatically creates test files for your functions and classes, with the correct module imports, saved directly into your workspace.
-- Add Comments: Instantly adds helpful, inline comments to your selected code to improve readability for you and your team.
-- Refactor Code: Improves the quality of your code by refactoring it for better efficiency, readability, and adherence to best practices.
-- Generate Docstrings: Automatically creates professional, language-appropriate docstrings for your functions and classes.
-- Secure API Key Handling: Prompts for your Gemini API key on first use and stores it securely in your VS Code settings.
+SnipSage is a multi-tool for developers, offering a suite of commands to supercharge your coding sessions.
 
-Built With
-- Languages: TypeScript
-- Frameworks/Platforms: Node.js, VS Code Extension API
-- APIs: Google Gemini API (gemini-2.0-flash)
-- Tools: vsce (for packaging), Git & GitHub
+Explain Code
+Instantly get a clear, human-readable explanation of any code snippet. Just select the code, run the "Explain" command, and hover to see the insights.
 
-Installation & Usage
-Prerequisites
-You will need a Google Gemini API key. You can get a free key from Google AI Studio.
+(Recommended: Insert a short GIF here showing the select -> run command -> hover workflow)
 
-Installation Steps
+Generate Unit Tests
+Stop writing boilerplate test code. Select a function or class, and SnipSage will generate a complete unit test file, saved directly into your workspace with the correct module imports.
 
-Option 1:
-- Clone the repo in your local coding environment.
-- Open terminal and run "npm install" to install packages from package.json
-- Press F5 to run the extension
-- A new VS Code window will open. Open any code file to test the extension. See How to Use section for more info.
+(Recommended: Insert a short GIF here showing a function being selected and a new test file being created and opened)
 
-Option 2: (Not sure whether this will work or not)
-- Navigate to the Releases page of this repository. (Replace with your actual link)
-- Download the latest snipsage-x.x.x.vsix file.
-- In VS Code, go to the Extensions view (Ctrl+Shift+X).
-- Click the ... menu at the top of the panel and select "Install from VSIX...".
-- Choose the .vsix file you just downloaded.
+Refactor & Improve Code
+Clean up complex functions and improve code quality. SnipSage can refactor your selected code to be more efficient, readable, and idiomatic according to language best practices.
+
+(Recommended: Insert a short GIF here showing a messy function being selected and then replaced by a cleaner version)
+
+Document Your Code (Add Comments & Docstrings)
+Eliminate the tedious task of documentation. SnipSage can automatically add helpful, inline comments to your code or generate a complete, professional docstring for any function or class.
+
+(Recommended: Insert a short GIF here showing a function being selected and then having comments or a docstring added to it)
 
 How to Use
-- Open command palette using Ctrl + Shift + P on Windows or Cmd + Shift + P on Mac and search SnipSage. You will see a list of SnipSage commands.
-- The first time you run a SnipSage command, you will be prompted to enter your Google Gemini API key. This will be securely saved for future use.
-To Explain Code:
-- Select a block of code.
-- Open the Command Palette (Ctrl+Shift+P) and run SnipSage: Explain Selection (for Hover).
-- Hover over the selected code to see the explanation.
+Install the Extension: Find "SnipSage" in the VS Code Marketplace and click "Install".
 
-For Other Features:
-- Select a block of code.
-- Open the Command Palette and choose any of the other SnipSage commands (Generate Unit Test, Refactor Selection, etc.).
+Set Your API Key: The first time you run any SnipSage command, you will be prompted to enter your Google Gemini API key. This is a one-time setup; the key will be securely stored in your settings.
+
+You can get a free Gemini API key from Google AI Studio.
+
+Select & Run:
+
+Highlight a block of code in your editor.
+
+Open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P).
+
+Type SnipSage to see the list of available commands and choose the one you need!
+
+Configuration
+snipsage.apiKey: Your Google Gemini API key. The extension will prompt you for this, but you can also set it manually in your VS Code settings (settings.json).
+
+Built With
+TypeScript & Node.js
+
+Visual Studio Code API
+
+Google Gemini API (gemini-2.0-flash)
+
+Contributing
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated. Please feel free to fork the repo and create a pull request.
+
+License
+Distributed under the MIT License. See LICENSE for more information.
