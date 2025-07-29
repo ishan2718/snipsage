@@ -1,82 +1,81 @@
 # SnipSage: Your AI Code Assistant
 
 <p align="center">
-  <img src="./assets/logo.png" alt="SnipSage Logo" width="256">
-</p>
-
-<p align="center">
-  <strong>Understand, validate, and improve your code faster than ever before with the power of the Google Gemini API directly in your editor.</strong>
+  <strong>
+    Stuck on a complex piece of code? Need to write tests, refactor, or add documentation?  
+    SnipSage brings the power of the Google Gemini API directly into your editor to help you code smarter, not harder.
+  </strong>
 </p>
 
 ---
 
-## What is SnipSage?
+## 💡 What is SnipSage?
 
-**SnipSage** is a VS Code extension that acts as your personal AI-powered assistant. It's designed to accelerate your workflow by helping you decipher complex code, ensure its quality, and improve its structure — all without leaving your editor.
+Have you ever been dropped into a new codebase and felt completely lost? Or wished you had an assistant to handle the tedious parts of coding, like writing tests and documentation?
 
-Whether you're navigating a new codebase or polishing your own work, SnipSage provides the insights you need, right when you need them.
+**SnipSage** is a Visual Studio Code extension that acts as your personal AI-powered assistant.  
+It's designed to accelerate your workflow by helping you:
+- Decipher complex code  
+- Ensure code quality  
+- Improve structure  
+
+—all without ever leaving your editor.
 
 ---
 
-## ✨ Features
+## 🚀 Getting Started: 3 Easy Steps
+
+### 1. Install the Extension  
+Install SnipSage directly from the **[VS Code Marketplace](https://marketplace.visualstudio.com/)**.
+
+### 2. Get Your API Key  
+SnipSage is powered by the **Google Gemini API**. You'll need your own API key to use the extension.  
+💡 You can get a free Gemini API key from [Google AI Studio](https://makersuite.google.com/app).
+
+### 3. Set Your API Key  
+When you run a SnipSage command for the first time, you'll be prompted to enter your API key.  
+Paste it in once, and it will be securely saved for future use. That’s it!
+
+---
+
+## 🛠 Features: Your AI-Powered Toolkit
+
+Once set up, use SnipSage's powerful features right from your editor.  
+Just **select a block of code**, open the **Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`), type `SnipSage`, and choose a command:
 
 ### 🧠 Explain Code  
-Instantly get a clear, human-readable explanation of any code snippet. Just select the code, run the **"Explain"** command, and hover to see the insights.
+Select a confusing function and run `SnipSage: Explain Selection`.  
+An AI-generated explanation will appear on hover, with an option to open it in a side panel for more detail.
 
 ### ✅ Generate Unit Tests  
-Stop writing boilerplate test code. Select a function or class, and SnipSage will generate a complete unit test file — saved directly into your workspace with the correct module imports.
+No more writing boilerplate test code.  
+Select a function or class, run `SnipSage: Generate Unit Test`, and a test file will be created in your workspace with all the correct imports.
 
 ### 🔧 Refactor & Improve Code  
-Clean up complex functions and improve code quality. SnipSage can refactor your selected code to be more efficient, readable, and idiomatic according to language best practices.
+Select messy code and run `SnipSage: Refactor Selection`.  
+Your code will be rewritten to be more efficient and readable, following best practices.
 
-### 📝 Document Your Code (Add Comments & Docstrings)  
-Eliminate the tedious task of documentation. SnipSage can automatically add helpful inline comments to your code or generate a complete, professional docstring for any function or class.
-
----
-
-## 🚀 How to Use
-
-1. **Install the Extension**  
-   Find **SnipSage** in the VS Code Marketplace and click _Install_.
-
-2. **Set Your API Key**  
-   The first time you run any SnipSage command, you will be prompted to enter your Google Gemini API key. This is a one-time setup; the key will be securely stored in your settings.
-
-   > 💡 You can get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-
-3. **Select & Run**  
-   - Highlight a block of code in your editor  
-   - Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)  
-   - Type `SnipSage` to see the list of available commands and choose the one you need!
+### 📝 Document Your Code  
+- **Add Comments**: Use `SnipSage: Add Comments to Selection` to insert helpful inline comments.  
+- **Generate Docstrings**: Use `SnipSage: Generate Docstring` to automatically create professional docstrings for functions and classes.
 
 ---
 
-## ⚙️ Configuration
+## 🧱 Built With
 
-| Setting              | Description                                         |
-|----------------------|-----------------------------------------------------|
-| `snipsage.apiKey`    | Your Google Gemini API key. Set during first use or manually in `settings.json`. |
-
----
-
-## 🛠 Built With
-
-- **TypeScript** & **Node.js**
-- **Visual Studio Code API**
-- **Google Gemini API** (`gemini-2.0-flash`)
+- [TypeScript](https://www.typescriptlang.org/) & [Node.js](https://nodejs.org/)
+- [Visual Studio Code API](https://code.visualstudio.com/api)
+- [Google Gemini API (gemini-2.0-flash)](https://ai.google.dev/)
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create.  
-Any contributions you make are greatly appreciated!
-
-Feel free to **fork the repo** and create a **pull request**.
+This is an open-source project, and contributions are always welcome!  
+Feel free to fork the repo, make changes, and submit a pull request.
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**.  
-See the [LICENSE](./LICENSE) file for more information.
+Distributed under the [MIT License](LICENSE).
