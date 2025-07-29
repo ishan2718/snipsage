@@ -33,7 +33,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 
     const result = await response.json() as GeminiResponse;
-
+    
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (rawText) {
         return rawText;
@@ -43,21 +43,37 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 }
 
-// --- Function to get the API key from settings, or prompt the user if it doesn't exist ---
+// --- UPDATED: Function to get the API key with a more user-friendly flow ---
 async function getApiKey(): Promise<string | undefined> {
     const config = vscode.workspace.getConfiguration('snipsage');
     let apiKey = config.get<string>('apiKey');
 
     if (!apiKey) {
-        apiKey = await vscode.window.showInputBox({
-            prompt: 'Please enter your Google Gemini API Key',
-            placeHolder: 'Enter your key here',
-            ignoreFocusOut: true,
-            password: true
-        });
+        // Show a more helpful message first, with clickable actions.
+        const getApiKeyChoice = await vscode.window.showInformationMessage(
+            'SnipSage requires a Google Gemini API key to function. You can get a free key from Google AI Studio.',
+            { modal: true }, // Makes the user have to choose an option
+            'Get API Key',
+            'Cancel'
+        );
 
-        if (apiKey) {
-            await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+        if (getApiKeyChoice === 'Get API Key') {
+            // Open the browser to the correct page for the user.
+            vscode.env.openExternal(vscode.Uri.parse('https://aistudio.google.com/app/apikey'));
+
+            // Then, show the input box for them to paste the key.
+            apiKey = await vscode.window.showInputBox({
+                prompt: 'Please paste your new Google Gemini API Key here',
+                placeHolder: 'Your API key',
+                password: true,
+                ignoreFocusOut: true,
+            });
+
+            if (apiKey) {
+                // Save the key to the global settings for future use.
+                await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('SnipSage API key saved successfully!');
+            }
         }
     }
     return apiKey;
@@ -88,7 +104,10 @@ export function activate(context: vscode.ExtensionContext) {
         if (!selectedText) { vscode.window.showErrorMessage('No code selected.'); return; }
 
         const apiKey = await getApiKey();
-        if (!apiKey) { vscode.window.showErrorMessage('SnipSage requires a Gemini API key to function.'); return; }
+        if (!apiKey) {
+            // User cancelled the API key process, so we stop here.
+            return;
+        }
 
         const fullText = editor.document.getText();
         const moduleName = path.parse(editor.document.fileName).name;
@@ -154,20 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Register Command 4: Refactor Code ---
     const refactorCommand = vscode.commands.registerCommand('snipsage.refactorCode', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are an expert software architect. Your task is to refactor the selected code snippet to be more efficient, readable, and idiomatic for the ${languageId} language.
-- Use the full file content for context, but ONLY modify the selected snippet.
-- Return ONLY the refactored version of the selected snippet.
-- Do NOT add any explanations, docstrings, or markdown fences.
-
-FULL FILE CONTENT (for context):
----
-${fullText}
----
-
-CODE TO REFACTOR:
----
-${selectedText}
----`,
+            (languageId, selectedText, fullText, moduleName) => `You are an expert software architect. Your task is to refactor the selected code snippet to be more efficient, readable, and idiomatic for the ${languageId} language.\n- Use the full file content for context, but ONLY modify the selected snippet.\n- Return ONLY the refactored version of the selected snippet.\n- Do NOT add any explanations, docstrings, or markdown fences.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO REFACTOR:\n---\n${selectedText}\n---`,
             (editor, selection, refactoredCode) => {
                 const cleanedCode = refactoredCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => { editBuilder.replace(selection, cleanedCode); });
@@ -178,21 +184,7 @@ ${selectedText}
     // --- Register Command 5: Generate Docstring ---
     const docstringCommand = vscode.commands.registerCommand('snipsage.generateDocstring', () => {
         commandHandler(
-            (languageId, selectedText, fullText, moduleName) => `You are a technical writer. Your task is to generate a professional docstring for the selected function/class.
-- Use the full file content for context.
-- Use the standard docstring format for the ${languageId} language (e.g., Google-style for Python, JSDoc for JavaScript).
-- Return ONLY the original selected snippet, but with the new docstring added.
-- Do NOT add any other code, explanations, or markdown fences.
-
-FULL FILE CONTENT (for context):
----
-${fullText}
----
-
-CODE TO DOCUMENT:
----
-${selectedText}
----`,
+            (languageId, selectedText, fullText, moduleName) => `You are a technical writer. Your task is to generate a professional docstring for the selected function/class.\n- Use the full file content for context.\n- Use the standard docstring format for the ${languageId} language (e.g., Google-style for Python, JSDoc for JavaScript).\n- Return ONLY the original selected snippet, but with the new docstring added.\n- Do NOT add any other code, explanations, or markdown fences.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO DOCUMENT:\n---\n${selectedText}\n---`,
             (editor, selection, documentedCode) => {
                 const cleanedCode = documentedCode.replace(/```[\w\s]*\n/g, '').replace(/```/g, '').trim();
                 editor.edit(editBuilder => { editBuilder.replace(selection, cleanedCode); });
@@ -206,7 +198,7 @@ ${selectedText}
         lastExplanation = null;
         vscode.window.setStatusBarMessage('SnipSage: Explanation cache cleared.', 5000);
     });
-
+    
     // --- Register Command 7: Show Explanation in Panel ---
     const showInPanelCommand = vscode.commands.registerCommand('snipsage.showExplanationInPanel', () => {
         if (lastExplanation) { showExplanationInWebview(lastExplanation); }
@@ -229,4 +221,4 @@ ${selectedText}
     context.subscriptions.push(explainCommand, testCommand, commentCommand, refactorCommand, docstringCommand, clearCacheCommand, showInPanelCommand, hoverProvider);
 }
 
-export function deactivate() { }
+export function deactivate() {}
