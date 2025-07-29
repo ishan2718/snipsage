@@ -2,7 +2,7 @@
   "name": "snipsage",
   "displayName": "SnipSage",
   "description": "Your AI-powered assistant to explain, test, and comment your code.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "ishansoni",
   "icon":"assets/icon.png",
   "engines": {
