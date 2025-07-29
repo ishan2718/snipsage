@@ -43,25 +43,22 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 }
 
-// --- UPDATED: Function to get the API key with a more user-friendly flow ---
+// --- Function to get the API key from settings, or prompt the user if it doesn't exist ---
 async function getApiKey(): Promise<string | undefined> {
     const config = vscode.workspace.getConfiguration('snipsage');
     let apiKey = config.get<string>('apiKey');
 
     if (!apiKey) {
-        // Show a more helpful message first, with clickable actions.
         const getApiKeyChoice = await vscode.window.showInformationMessage(
             'SnipSage requires a Google Gemini API key to function. You can get a free key from Google AI Studio.',
-            { modal: true }, // Makes the user have to choose an option
+            { modal: true },
             'Get API Key',
             'Cancel'
         );
 
         if (getApiKeyChoice === 'Get API Key') {
-            // Open the browser to the correct page for the user.
             vscode.env.openExternal(vscode.Uri.parse('https://aistudio.google.com/app/apikey'));
 
-            // Then, show the input box for them to paste the key.
             apiKey = await vscode.window.showInputBox({
                 prompt: 'Please paste your new Google Gemini API Key here',
                 placeHolder: 'Your API key',
@@ -70,7 +67,6 @@ async function getApiKey(): Promise<string | undefined> {
             });
 
             if (apiKey) {
-                // Save the key to the global settings for future use.
                 await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage('SnipSage API key saved successfully!');
             }
@@ -82,15 +78,50 @@ async function getApiKey(): Promise<string | undefined> {
 // --- Function to display explanation in a Webview Panel ---
 function showExplanationInWebview(explanation: string) {
     const panel = vscode.window.createWebviewPanel('snipSageExplanation', 'SnipSage Explanation', vscode.ViewColumn.Beside, {});
+    
+    // A more robust markdown to HTML converter.
     const formattedExplanation = explanation
         .replace(/```([\w\s]*)\n([\s\S]*?)```/g, (match, lang, code) => `<pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code>$1</code>')
         .replace(/^\* (.*$)/gm, '<ul><li>$1</li></ul>').replace(/\n/g, '<br>');
 
+    // UPDATED: The style block now uses VS Code's theme variables.
     panel.webview.html = `
-        <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SnipSage Explanation</title><style>body{background-color:#1e1e1e;color:#d4d4d4;font-family:sans-serif;padding:20px;line-height:1.6}pre{background-color:#252526;padding:1em;border-radius:5px;white-space:pre-wrap;word-wrap:break-word}code{background-color:#333;padding:2px 6px;border-radius:4px;font-family:monospace}strong{font-weight:bold}ul{margin:0;padding-left:20px}</style>
-        </head><body>${formattedExplanation}</body></html>`;
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SnipSage Explanation</title>
+            <style>
+                body { 
+                    background-color: var(--vscode-editor-background); 
+                    color: var(--vscode-editor-foreground); 
+                    font-family: var(--vscode-font-family);
+                    padding: 20px; 
+                    line-height: 1.6; 
+                }
+                pre { 
+                    background-color: var(--vscode-text-block-quote-background); 
+                    padding: 1em; 
+                    border-radius: 5px; 
+                    white-space: pre-wrap; 
+                    word-wrap: break-word; 
+                }
+                code { 
+                    background-color: var(--vscode-text-code-block-background); 
+                    padding: 2px 6px; 
+                    border-radius: 4px; 
+                    font-family: var(--vscode-editor-font-family); 
+                }
+                strong { font-weight: bold; }
+                ul { margin: 0; padding-left: 20px; }
+            </style>
+        </head>
+        <body>
+            ${formattedExplanation}
+        </body>
+        </html>`;
 }
 
 // --- Main activation function ---
@@ -105,7 +136,6 @@ export function activate(context: vscode.ExtensionContext) {
 
         const apiKey = await getApiKey();
         if (!apiKey) {
-            // User cancelled the API key process, so we stop here.
             return;
         }
 
