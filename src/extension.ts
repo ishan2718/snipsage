@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-// --- Define a type for the expected Gemini API response structure ---
+// Define a type for the expected Gemini API response structure
 interface GeminiResponse {
     candidates: Array<{
         content: {
@@ -15,7 +15,7 @@ interface GeminiResponse {
 let lastExplainedRange: vscode.Range | null = null;
 let lastExplanation: string | null = null;
 
-// --- Reusable function to call the Gemini API ---
+// Function to call the Gemini API
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     const payload = { contents: [{ parts: [{ text: prompt }] }] };
@@ -43,7 +43,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     }
 }
 
-// --- Function to get the API key from settings, or prompt the user if it doesn't exist ---
+// Function to get the API key from settings, or prompt the user if it doesn't exist
 async function getApiKey(): Promise<string | undefined> {
     const config = vscode.workspace.getConfiguration('snipsage');
     let apiKey = config.get<string>('apiKey');
@@ -75,17 +75,16 @@ async function getApiKey(): Promise<string | undefined> {
     return apiKey;
 }
 
-// --- Function to display explanation in a Webview Panel ---
+// Function to display explanation in a Webview Panel
 function showExplanationInWebview(explanation: string) {
     const panel = vscode.window.createWebviewPanel('snipSageExplanation', 'SnipSage Explanation', vscode.ViewColumn.Beside, {});
     
-    // A more robust markdown to HTML converter.
     const formattedExplanation = explanation
         .replace(/```([\w\s]*)\n([\s\S]*?)```/g, (match, lang, code) => `<pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code>$1</code>')
         .replace(/^\* (.*$)/gm, '<ul><li>$1</li></ul>').replace(/\n/g, '<br>');
 
-    // UPDATED: The style block now uses VS Code's theme variables.
+    // Use VS Code theme variables for panel creation
     panel.webview.html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -124,7 +123,7 @@ function showExplanationInWebview(explanation: string) {
         </html>`;
 }
 
-// --- Main activation function ---
+// Main activation function
 export function activate(context: vscode.ExtensionContext) {
 
     const commandHandler = async (promptGenerator: (languageId: string, selectedText: string, fullText: string, moduleName: string) => string, outputHandler: (editor: vscode.TextEditor, selection: vscode.Selection, responseText: string) => void) => {
@@ -153,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
     };
 
-    // --- Register Command 1: Explain Code (for Hover) ---
+    // Register Command 1: Explain Code (for Hover)
     const explainCommand = vscode.commands.registerCommand('snipsage.explainCode', () => {
         commandHandler(
             (languageId, selectedText, fullText, moduleName) => `You are an expert programmer. Explain ONLY the selected snippet using markdown for formatting.\n\nFULL FILE CONTENT:\n---\n${fullText}\n---\n\nSELECTED SNIPPET TO EXPLAIN:\n---\n${selectedText}\n---`,
@@ -165,7 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- Register Command 2: Generate Unit Test ---
+    // Register Command 2: Generate Unit Test
     const testCommand = vscode.commands.registerCommand('snipsage.generateTest', () => {
         commandHandler(
             (languageId, selectedText, fullText, moduleName) => `You are a testing expert. Write a unit test for the selected snippet from the module named '${moduleName}'. Use a common testing framework for the language. Return ONLY the code block for the test.\n\nFULL FILE CONTENT:\n---\n${fullText}\n---\n\nSELECTED SNIPPET TO TEST:\n---\n${selectedText}\n---`,
@@ -189,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- Register Command 3: Add Comments ---
+    // Register Command 3: Add Comments
     const commentCommand = vscode.commands.registerCommand('snipsage.addComments', () => {
         commandHandler(
             (languageId, selectedText, fullText, moduleName) => `You are a code commenting AI. Your ONLY job is to add inline comments to the provided code. Follow these rules strictly: 1. PRESERVE CODE: You must return the exact code you were given, character-for-character. Do not delete, add, or change any lines of code. 2. ADD COMMENTS: Add helpful, concise inline comments. 3. NO EXTRA TEXT: Your output must ONLY be the code with comments.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO ADD COMMENTS TO:\n---\n${selectedText}\n---`,
@@ -200,7 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- Register Command 4: Refactor Code ---
+    // Register Command 4: Refactor Code
     const refactorCommand = vscode.commands.registerCommand('snipsage.refactorCode', () => {
         commandHandler(
             (languageId, selectedText, fullText, moduleName) => `You are an expert software architect. Your task is to refactor the selected code snippet to be more efficient, readable, and idiomatic for the ${languageId} language.\n- Use the full file content for context, but ONLY modify the selected snippet.\n- Return ONLY the refactored version of the selected snippet.\n- Do NOT add any explanations, docstrings, or markdown fences.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO REFACTOR:\n---\n${selectedText}\n---`,
@@ -211,7 +210,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- Register Command 5: Generate Docstring ---
+    // Register Command 5: Generate Docstring
     const docstringCommand = vscode.commands.registerCommand('snipsage.generateDocstring', () => {
         commandHandler(
             (languageId, selectedText, fullText, moduleName) => `You are a technical writer. Your task is to generate a professional docstring for the selected function/class.\n- Use the full file content for context.\n- Use the standard docstring format for the ${languageId} language (e.g., Google-style for Python, JSDoc for JavaScript).\n- Return ONLY the original selected snippet, but with the new docstring added.\n- Do NOT add any other code, explanations, or markdown fences.\n\nFULL FILE CONTENT (for context):\n---\n${fullText}\n---\n\nCODE TO DOCUMENT:\n---\n${selectedText}\n---`,
@@ -222,19 +221,19 @@ export function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    // --- Register Command 6: Clear Cache ---
+    // Register Command 6: Clear Cache
     const clearCacheCommand = vscode.commands.registerCommand('snipsage.clearCache', () => {
         lastExplainedRange = null;
         lastExplanation = null;
         vscode.window.setStatusBarMessage('SnipSage: Explanation cache cleared.', 5000);
     });
     
-    // --- Register Command 7: Show Explanation in Panel ---
+    // Register Command 7: Show Explanation in Panel (Internal Command)
     const showInPanelCommand = vscode.commands.registerCommand('snipsage.showExplanationInPanel', () => {
         if (lastExplanation) { showExplanationInWebview(lastExplanation); }
     });
 
-    // --- Register the Hover Provider ---
+    // Register the Hover Provider
     const hoverProvider = vscode.languages.registerHoverProvider({ scheme: 'file', language: '*' }, {
         provideHover(document, position, token) {
             if (lastExplainedRange && lastExplanation && lastExplainedRange.contains(position)) {
